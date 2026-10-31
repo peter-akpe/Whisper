@@ -46,9 +46,9 @@ body {
 }
 
 .fa-signal {
-    font-size: 20px;
-    padding: 5px;
-    color: white;
+  font-size: 20px;
+  padding: 5px;
+  color: white;
 }
 
 button,
@@ -176,11 +176,11 @@ button {
   font-size: 15px;
   position: relative;
   z-index: 5;
-  background-image: url(../images/pexels-sakainget-11038364.jpg) ;
+  background-image: url(../images/pexels-sakainget-11038364.jpg);
   background-repeat: no-repeat;
   /* background-color: #000; */
-  
-  
+
+
 }
 
 @media(max-width:699px) {
@@ -201,7 +201,7 @@ button {
   background-position: center;
   background-size: cover;
 
-  
+
 }
 
 .screen::-webkit-scrollbar {
@@ -642,7 +642,7 @@ textarea:focus {
   border-radius: 32px;
   background: #11254b00;
   border: 1px solid var(--glass-b);
-  backdrop-filter: blur(26px) ;
+  backdrop-filter: blur(26px);
   -webkit-backdrop-filter: blur(26px) saturate(180%);
   box-shadow: 0 14px 40px rgba(0, 0, 0, .4);
 }
@@ -684,11 +684,12 @@ textarea:focus {
 }
 
 .toast {
-  display: none;
   position: absolute;
   top: 80px;
   left: 50%;
-  transform: translate(-50%, -140%);
+  transform: translate(-50%, -200%);
+  opacity: 0;
+  pointer-events: none;
   z-index: 60;
   padding: 12px 20px;
   border-radius: 30px;
@@ -696,8 +697,13 @@ textarea:focus {
   color: var(--navy);
   font-weight: 700;
   font-size: 14px;
-  transition: transform .45s cubic-bezier(.3, 1.4, .5, 1);
   white-space: nowrap;
+  transition: transform .45s cubic-bezier(.3, 1.4, .5, 1), opacity .3s;
+}
+
+.toast.show {
+  transform: translate(-50%, 0);
+  opacity: 1;
 }
 
 .toast.show {
