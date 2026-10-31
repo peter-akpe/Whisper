@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>Whisper</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=DM+Sans:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/style.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+  </head>
+  <body>
+    <div class="amb"><i></i><i></i></div>
+
+    <div class="phone" id="phone">
+      <div class="island"></div>
+      <div class="blob b1"></div>
+      <div class="blob b2"></div>
+      <div class="status"><span id="clock">9:41</span><span>5G <i class="fa-solid fa-signal"></i></span></div>
+      <div class="toast" id="toast" role="status"></div>
+
+      <!-- AUTH -->
+      <section class="screen hero" id="auth">
+        <div class="logo" id="logo">w</div>
+        <h1>Say it.<br />Stay unseen.</h1>
+        <p class="sub">
+          Send anonymous messages. Everyone else just sees “Anonymous”.
+        </p>
+        <div class="seg" id="seg">
+          <i class="pill"></i><button class="on" data-m="in">Sign in</button
+          ><button data-m="up">Create account</button>
+        </div>
+        <label class="field up hidden"
+          ><input id="name" placeholder="Your name" autocomplete="name"
+        /></label>
+        <label class="field"
+          ><input
+            id="email"
+            type="email"
+            placeholder="Email"
+            autocomplete="email"
+        /></label>
+        <label class="field"
+          ><input
+            id="pass"
+            type="password"
+            placeholder="Password"
+            autocomplete="current-password"
+        /></label>
+        <div class="consent glass up hidden">
+          <button
+            class="sw"
+            id="sw"
+            role="switch"
+            aria-checked="false"
+            aria-label="Accept privacy terms"
+          ></button>
+          <div>
+            <b>Stay Logged in.</b> Other users never see who
+            you are.
+          </div>
+        </div>
+        <button class="btn" id="go">Sign in</button>
+        <div class="err" id="err" role="alert"></div>
+      </section>
+
+      <!-- APP -->
+      <section class="screen hidden" id="wall">
+        <h1>The Wall</h1>
+        <p class="sub">Anonymous messages, freshest first.</p>
+        <div id="feed"></div>
+      </section>
+
+      <section class="screen hidden" id="send">
+        <h1>Send a whisper</h1>
+        <p class="sub">Say what you can’t say out loud.</p>
+        <textarea
+          id="msg"
+          maxlength="280"
+          placeholder="Type your message…"
+        ></textarea>
+        <div class="count"><span id="cnt">0</span>/280</div>
+        <div class="chips" id="chips"></div>
+        <div class="note">
+          <span>🔒</span
+          ><span
+            >Shown as “Anonymous” to everyone. 
+            .</span
+          >
+        </div>
+        <button class="btn" id="post" disabled>Send anonymously</button>
+      </section>
+
+      <section class="screen hidden" id="me">
+        <h1 id="hello">You</h1>
+        <p class="sub" id="mail"></p>
+        <div class="stats">
+          <div class="glass stat">
+            <b id="mine">0</b><span>whispers sent</span>
+          </div>
+          <div class="glass stat">
+            <b id="likes">0</b><span>hearts received</span>
+          </div>
+        </div>
+        <div class="glass">
+          <div class="row">
+            <span>Visible to others as</span><b>Anonymous</b>
+          </div>
+          <div class="row">
+            <span>Visible to you as</span><b>Name + email</b>
+          </div>
+        </div>
+        <button
+          class="btn"
+          id="out"
+          style="
+            margin-top: 22px;
+            background: var(--glass);
+            box-shadow: none;
+            border: 1px solid var(--glass-b);
+          "
+        >
+          Sign out
+        </button>
+      </section>
+
+      <section class="screen hidden" id="admin">
+        <h1>Inbox</h1>
+        <p class="sub">Owner view. Real senders revealed.</p>
+        <div class="stats">
+          <div class="glass stat">
+            <b id="aTotal">0</b><span>messages</span>
+          </div>
+          <div class="glass stat"><b id="aUsers">0</b><span>senders</span></div>
+        </div>
+        <label class="field search"
+          ><input id="q" placeholder="Search name, email or message"
+        /></label>
+        <div id="aList"></div>
+      </section>
+
+      <nav class="tabbar hidden" id="tabs">
+        <button class="tab on" data-t="wall">
+          <img src="images/discussion.svg" alt="" /> Wall
+        </button>
+        <button class="tab send" data-t="send" aria-label="Send">
+          <img src="images/message-circle.svg" alt="" />Message
+        </button>
+        <button class="tab" data-t="me">
+          <img src="images/user.svg" alt="" /> You
+        </button>
+        <button class="tab hidden" data-t="admin" id="adminTab">
+          <img src="images/incognito.svg" alt="" /> Owner<i class="dot"></i>
+        </button>
+      </nav>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
