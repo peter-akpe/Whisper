@@ -722,3 +722,9 @@ textarea:focus {
     transition: none !important;
   }
 }
+
+
+.badge{position:absolute;top:0;right:calc(50% - 30px);min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--red);color:#fff;font-size:11px;font-weight:800;font-style:normal;display:grid;place-items:center;box-shadow:0 0 0 2px var(--navy);animation:bump .4s cubic-bezier(.3,1.6,.5,1)}
+@keyframes bump{from{transform:scale(.3)}}
+.card.fresh{border-color:var(--sky);box-shadow:0 0 0 1px rgba(124,212,255,.35)}
+.new-tag{margin-left:auto;font-size:10px;font-weight:800;letter-spacing:.6px;color:var(--navy);background:var(--sky);padding:3px 8px;border-radius:10px}

@@ -7,6 +7,9 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
 
 let user = null, isAdmin = false, wall = [], hearts = [];
+let unread = 0, chan = null, curTab = 'wall';
+const sent = new Set();
+const ts = iso => new Date(iso).getTime();
 let mood = '💙', mode = 'in', agreed = false;
 const moods = ['💙', '🔥', '😂', '😮‍💨', '🫶', '👀'];
 const grads = [['#FF3B4E', '#ff8a5c'], ['#7CD4FF', '#4a7bff'], ['#F4F1EC', '#7CD4FF'], ['#FF3B4E', '#7a2bff']];
@@ -55,11 +58,14 @@ sb.auth.onAuthStateChange((_evt, session) => {
 
 async function enter() {
   const { data } = await sb.rpc('is_admin'); isAdmin = data === true;
+  await initUnread(); subscribe();
   $('#auth').classList.add('hidden'); $('#tabs').classList.remove('hidden');
   $('#adminTab').classList.toggle('hidden', !isAdmin);
   go('wall'); toast('Hi ' + firstName() + ' 👋');
 }
 function showAuth() {
+  if (chan) { sb.removeChannel(chan); chan = null }
+  unread = 0; wall = []; setBadge();
   $$('.screen').forEach(s => s.classList.add('hidden')); $('#tabs').classList.add('hidden');
   $('#auth').classList.remove('hidden'); $('#pass').value = '';
 }
@@ -67,6 +73,7 @@ $('#out').onclick = () => sb.auth.signOut();
 
 /* ---------- navigation ---------- */
 function go(t) {
+  curTab = t; if (t === 'wall') { unread = 0; setBadge(); }
   $$('.screen').forEach(s => s.classList.add('hidden')); $('#' + t).classList.remove('hidden'); $('#' + t).scrollTop = 0;
   $$('.tab').forEach(b => b.classList.toggle('on', b.dataset.t === t));
   if (t === 'wall') drawWall(); if (t === 'me') drawMe(); if (t === 'admin') drawAdmin();
@@ -82,18 +89,15 @@ async function loadWall() {
   if (m.error) { toast('Could not load messages'); return }
   wall = m.data; hearts = h.data || [];
 }
-async function drawWall() {
-  await loadWall();
-  const f = $('#feed');
-  if (!wall.length) { f.innerHTML = '<div class="empty">Nothing here yet.<br>Be the first to send a whisper.</div>'; return }
-  f.innerHTML = wall.map(m => {
-    const hs = hearts.filter(h => h.message_id === m.id), on = hs.some(h => h.user_id === user.id), g = gradFor(m.id);
-    return `<article class="card glass" style="--c1:${g[0]};--c2:${g[1]}">
-      <div class="who"><div class="mask">${esc(m.mood)}</div><div><b>Anonymous</b><small>${ago(m.created_at)}</small></div></div>
-      <p>${esc(m.text)}</p>
-      <div class="tools"><button class="heart ${on ? 'on' : ''}" data-id="${esc(m.id)}" data-on="${on}">${on ? '♥' : '♡'} ${hs.length}</button></div></article>`;
-  }).join('');
-  $$('.heart').forEach(h => h.onclick = async () => {
+function cardHTML(m, fresh) {
+  const hs = hearts.filter(h => h.message_id === m.id), on = hs.some(h => h.user_id === user.id), g = gradFor(m.id);
+  return `<article class="card glass${fresh ? ' fresh' : ''}" data-mid="${esc(m.id)}" style="--c1:${g[0]};--c2:${g[1]}">
+    <div class="who"><div class="mask">${esc(m.mood)}</div><div><b>Anonymous</b><small>${ago(m.created_at)}</small></div>${fresh ? '<span class="new-tag">NEW</span>' : ''}</div>
+    <p>${esc(m.text)}</p>
+    <div class="tools"><button class="heart ${on ? 'on' : ''}" data-id="${esc(m.id)}" data-on="${on}">${on ? '♥' : '♡'} ${hs.length}</button></div></article>`;
+}
+function bindHearts(root) {
+  root.querySelectorAll('.heart').forEach(h => h.onclick = async () => {
     h.disabled = true;
     const q = sb.from('hearts');
     if (h.dataset.on === 'true') await q.delete().eq('message_id', h.dataset.id).eq('user_id', user.id);
@@ -101,6 +105,75 @@ async function drawWall() {
     drawWall();
   });
 }
+async function drawWall() {
+  await loadWall();
+  const base = getSeen() ?? 0, f = $('#feed');
+  if (!wall.length) { f.innerHTML = '<div class="empty">Nothing here yet.<br>Be the first to send a whisper.</div>'; markRead(); return }
+  f.innerHTML = wall.map(m => cardHTML(m, ts(m.created_at) > base && !sent.has(m.id))).join('');
+  bindHearts(f);
+  markRead();
+}
+function addCard(m) {
+  const f = $('#feed');
+  if (f.querySelector('[data-mid="' + m.id + '"]')) return;
+  f.querySelector('.empty')?.remove();
+  f.insertAdjacentHTML('afterbegin', cardHTML(m, false));
+  bindHearts(f.firstElementChild);
+}
+
+/* ---------- unread badge + live messages (WhatsApp style) ---------- */
+const seenKey = () => 'w_seen_' + user.id;
+function getSeen() { try { const v = localStorage.getItem(seenKey()); return v === null ? null : +v } catch (e) { return null } }
+function setSeen(n) { try { localStorage.setItem(seenKey(), String(n)) } catch (e) { } }
+function setBadge() {
+  const b = $('#badge'); if (!b) return;
+  b.textContent = unread > 99 ? '99+' : unread; b.classList.toggle('hidden', unread < 1);
+  document.title = (unread ? '(' + unread + ') ' : '') + 'Whisper';
+}
+function markRead() {
+  const newest = wall.length ? ts(wall[0].created_at) : 0;
+  setSeen(Math.max(getSeen() ?? 0, newest)); unread = 0; setBadge();
+}
+async function initUnread() {
+  await loadWall();
+  let seen = getSeen();
+  if (seen === null) { seen = wall.length ? ts(wall[0].created_at) : 0; setSeen(seen) }
+  const { data } = await sb.from('sender_identity').select('message_id').eq('user_id', user.id);
+  (data || []).forEach(r => sent.add(r.message_id));
+  unread = wall.filter(m => ts(m.created_at) > seen && !sent.has(m.id)).length;
+  setBadge();
+}
+async function isMine(id) {
+  if (sent.has(id)) return true;
+  const { data } = await sb.from('sender_identity').select('message_id').eq('message_id', id).eq('user_id', user.id).maybeSingle();
+  if (data) sent.add(id);
+  return !!data;
+}
+async function onRealtime(p) {
+  if (!user) return;
+  if (p.eventType === 'DELETE') {
+    const id = p.old?.id; if (!id) return;
+    wall = wall.filter(m => m.id !== id);
+    document.querySelector('[data-mid="' + id + '"]')?.remove();
+    if (curTab === 'wall' && !wall.length) $('#feed').innerHTML = '<div class="empty">Nothing here yet.<br>Be the first to send a whisper.</div>';
+    return;
+  }
+  if (p.eventType !== 'INSERT') return;
+  const m = { id: p.new.id, text: p.new.text, mood: p.new.mood, created_at: p.new.created_at };
+  if (wall.some(x => x.id === m.id)) return;
+  wall.unshift(m);
+  const onWall = curTab === 'wall';
+  if (onWall) addCard(m);
+  if (onWall && !document.hidden) { markRead(); return }   // user is looking at it: already read
+  if (await isMine(m.id)) return;                           // never count your own message
+  unread++; setBadge();
+  if (!onWall) { toast('New message 💬'); try { navigator.vibrate?.(25) } catch (e) { } }
+}
+function subscribe() {
+  if (chan) return;
+  chan = sb.channel('whisper-feed').on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, onRealtime).subscribe();
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden && user && curTab === 'wall') markRead() });
 
 /* ---------- send ---------- */
 $('#chips').innerHTML = moods.map((m, i) => `<button class="chip ${i ? '' : 'on'}" data-m="${m}">${m}</button>`).join('');
@@ -109,8 +182,9 @@ $('#msg').oninput = e => { $('#cnt').textContent = e.target.value.length; $('#po
 $('#post').onclick = async () => {
   const text = $('#msg').value.trim(); if (!text) return;
   $('#post').disabled = true;
-  const { error } = await sb.rpc('send_message', { p_text: text, p_mood: mood });
+  const { data: newId, error } = await sb.rpc('send_message', { p_text: text, p_mood: mood });
   if (error) { toast(error.message.includes('Slow down') ? 'Slow down a little 🙏' : 'Could not send. Try again.'); $('#post').disabled = false; return }
+  if (newId) sent.add(newId);
   $('#msg').value = ''; $('#cnt').textContent = 0;
   toast('Sent anonymously ✨'); go('wall');
 };
